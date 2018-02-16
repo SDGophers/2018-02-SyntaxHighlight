@@ -15,7 +15,11 @@ type ASTComment struct {
 	line    int
 }
 
-func (c ASTComment) String() string { return "#" + c.Comment + "\n" }
+func (c ASTComment) String() string {
+
+	return c.Comment + "\n"
+}
+
 func (c ASTComment) Line() int      { return c.line }
 
 type ASTBlank struct {
@@ -30,10 +34,11 @@ type ASTHost struct {
 	IP      net.IP
 	Aliases []string
 	line    int
+	comment *ASTComment
 }
 
 func (h ASTHost) String() string {
-	return h.IP.String() + "\t" + strings.Join(h.Aliases, " ") + "\n"
+	return h.IP.String() + "\t" + strings.Join(h.Aliases, " ")
 }
 func (h ASTHost) Line() int { return h.line }
 
