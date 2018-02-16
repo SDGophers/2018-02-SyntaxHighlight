@@ -1,0 +1,110 @@
+{
+package main
+
+import (
+	"log"
+	"strings"
+	"net"
+)
+
+}
+
+
+hosts <- items:(( host / blanks / comment )+) {
+	lns := toASTHostLineSlice(items)
+	return ASTHosts(lns),nil
+
+}
+
+host <- _* ip:ip _+ a:aliases NLEOF  {
+	return ASTHost{
+		IP: ip.(net.IP),
+		Aliases: a.([]string),
+		line: c.pos.line,
+	},nil
+
+}
+
+comment <- hash comment:(NOTEOL*)  NLEOF {
+	cmt := toIfaceSlice(comment)
+	str := make([]byte,0,len(cmt))
+	for i := range cmt {
+	        bs := cmt[i].([]byte)
+		for j := range bs {
+			str = append(str, bs[j])
+		}
+	}
+	return ASTComment{
+		Comment: string(str),
+		line: c.pos.line,
+	}, nil
+}
+blanks <- blanks:(blank+) {
+	lns := toIfaceSlice(blanks)
+	return ASTBlank{ 
+		Count: len(lns),
+		line: c.pos.line,
+	},nil
+}
+blank <- _* NL { return "\n", nil }
+
+aliases <- first:alias rest:(op_alias*)  {
+
+	rst := toStringSlice(rest)
+	strs := make([]string,0,len(rst)+1)
+	strs = append(strs,first.(string))
+	for _,s := range rst {
+		if s == "" {
+			continue
+		}
+		strs = append(strs,s)
+	}
+	return strs,nil
+}
+
+op_alias <- _+ a:alias { return a, nil }
+
+alias <- (word / dot / dash)+ {
+	return string(c.text), nil
+}
+
+ip <- ipv4 / ipv6
+
+ipv6 <- (hex*  colon? colon hex*)+ {
+	return net.ParseIP(string(c.text)),nil
+}
+ipv4 <- (quadpair dot quadpair dot quadpair dot quadpair) {
+	return net.ParseIP(string(c.text)),nil
+}
+
+quadpair <- [0-9]+ 
+
+
+colon <- ':' 
+digit <- [0-9] 
+
+hex <- [0-9a-f]i+ 
+dash <- "-" 
+dot <- "." 
+
+
+word <- [\pL]+ 
+
+hash <- "#" 
+
+NOTEOL <- ch:(.) &{
+	char := string(ch.([]byte))
+	switch char {
+	case "\n","\r":
+		return false, nil
+	}
+	return true, nil
+}  { return c.text, nil }
+
+
+
+NLEOF <- NL / EOF
+
+NL <- ( "\r\n" / "\n\r" / "\r" / "\n" )
+_ "space" <- ( "\t" / [\pZs] ) 
+EOF <- !.
