@@ -16,11 +16,17 @@ hosts <- items:(( host / blanks / comment )+) {
 
 }
 
-host <- _* ip:ip _+ a:aliases NLEOF  {
+host <- _* ip:ip _+ a:aliases _* com:comment? {
+	var com_val ASTComment
+	if com != nil {
+	    com_val = com.(ASTComment)
+	}
+
 	return ASTHost{
 		IP: ip.(net.IP),
 		Aliases: a.([]string),
 		line: c.pos.line,
+		comment: &com_val,
 	},nil
 
 }
@@ -64,7 +70,7 @@ aliases <- first:alias rest:(op_alias*)  {
 
 op_alias <- _+ a:alias { return a, nil }
 
-alias <- (word / dot / dash)+ {
+alias <- (word / digit / dot / dash)+ {
 	return string(c.text), nil
 }
 
@@ -106,5 +112,5 @@ NOTEOL <- ch:(.) &{
 NLEOF <- NL / EOF
 
 NL <- ( "\r\n" / "\n\r" / "\r" / "\n" )
-_ "space" <- ( "\t" / [\pZs] ) 
+_ "space" <- ( "\t" / [\pZ] )
 EOF <- !.
